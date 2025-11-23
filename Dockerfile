@@ -17,6 +17,8 @@ RUN apk update \
 RUN apk del git curl \
   && rm -rf /var/cache/apk/*
 COPY pm2.config.js $WORKDIR
+COPY scripts/docker-startup.sh $WORKDIR
+RUN chmod +x $WORKDIR/docker-startup.sh
 WORKDIR $WORKDIR
 EXPOSE 3000
-CMD [ "pm2-runtime", "pm2.config.js" ]
+CMD [ "./docker-startup.sh" ]
