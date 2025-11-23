@@ -102,6 +102,7 @@
     "lodash.startcase": "^4.4.0",
     "lodash.uniqby": "^4.7.0",
     "luxon": "^3.7.1",
+    "m3u-parser-generator": "^5.0.2",
     "mockdate": "^3.0.5",
     "nedb-promises": "^6.2.3",
     "node-cleanup": "^2.1.2",
