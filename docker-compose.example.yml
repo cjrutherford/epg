@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  epg:
+    image: ghcr.io/iptv-org/epg:master
+    container_name: epg
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount your channels.xml file
+      - ./channels.xml:/epg/channels.xml
+      # Optional: Persist the public directory
+      - ./public:/epg/public
+      # Optional: Persist downloaded data to avoid re-downloading
+      - ./temp:/epg/temp
+    environment:
+      # Run initial data load and grab on startup
+      - RUN_AT_STARTUP=true
+      # Schedule for automatic updates (default: daily at midnight UTC)
+      - CRON_SCHEDULE=0 0 * * *
+      # Optional: Specify a specific site instead of using channels.xml
+      # - SITE=example.com
+      # - CLANG=en
+      # Optional: Performance tuning
+      # - MAX_CONNECTIONS=10
+      # - DAYS=7
+      # - TIMEOUT=5000
+      # - DELAY=1000
+      # Optional: Output options
+      # - GZIP=true
+      # - CURL=false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/guide.xml"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s

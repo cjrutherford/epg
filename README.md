@@ -158,6 +158,12 @@ docker pull ghcr.io/iptv-org/epg:master
 docker run -p 3000:3000 -v /path/to/channels.xml:/epg/channels.xml ghcr.io/iptv-org/epg:master
 ```
 
+Or use Docker Compose (see `docker-compose.example.yml` for a complete example):
+
+```sh
+docker-compose up -d
+```
+
 By default, the container will:
 1. Load all API data from the [iptv-org/database](https://github.com/iptv-org/database) on startup
 2. Download the guide on startup and save it to `/epg/public/guide.xml`
