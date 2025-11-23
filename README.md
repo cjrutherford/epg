@@ -158,9 +158,12 @@ docker pull ghcr.io/iptv-org/epg:master
 docker run -p 3000:3000 -v /path/to/channels.xml:/epg/channels.xml ghcr.io/iptv-org/epg:master
 ```
 
-By default, the guide will be downloaded every day at 00:00 UTC and saved to the `/epg/public/guide.xml` file inside the container.
+By default, the container will:
+1. Load all API data from the [iptv-org/database](https://github.com/iptv-org/database) on startup
+2. Download the guide on startup and save it to `/epg/public/guide.xml`
+3. Run scheduled updates every day at 00:00 UTC
 
-From the outside, it will be available at this link:
+The guide will be served via HTTP and available at:
 
 ```
 http://localhost:3000/guide.xml

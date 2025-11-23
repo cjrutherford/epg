@@ -13,7 +13,7 @@ RUN apk update \
     && cd $WORKDIR \
     && git clone --depth 1 -b $(echo "${GIT_BRANCH} ${GIT_REPO}") . \
     && npm install \
-    && mkdir /public
+    && mkdir -p public temp/data
 RUN apk del git curl \
   && rm -rf /var/cache/apk/*
 COPY pm2.config.js $WORKDIR
