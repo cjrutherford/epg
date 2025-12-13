@@ -4,7 +4,7 @@ import { M3uParser } from 'm3u-parser-generator'
 import { generateChannelsXML } from '../../core'
 import { Channel } from '../../models'
 import { Command } from 'commander'
-import { data, loadData } from '../../api'
+import { data, loadData, searchChannels } from '../../api'
 import axios from 'axios'
 
 const program = new Command()
@@ -80,26 +80,38 @@ async function main() {
     const channelLogo = media.attributes['tvg-logo'] || null
     const channelLang = media.attributes['tvg-language'] || lang
 
-    // If no tvg-id, skip this channel as we can't match it to an EPG source
-    if (!tvgId) {
-      skippedCount++
-      return
+    let apiChannel = null
+    let matchMethod = ''
+
+    // Try to match by tvg-id first
+    if (tvgId) {
+      apiChannel = data.channelsKeyById.get(tvgId)
+      if (apiChannel) {
+        matchMethod = 'tvg-id'
+      }
     }
 
-    // Look up the channel in the API data
-    const apiChannel = data.channelsKeyById.get(tvgId)
+    // If no match by tvg-id, try to search by channel name
+    if (!apiChannel && channelName) {
+      const searchResults = searchChannels(channelName)
+      if (searchResults.count() > 0) {
+        // Use the first search result
+        apiChannel = searchResults.first()
+        matchMethod = 'name'
+      }
+    }
     
     if (!apiChannel) {
-      logger.debug(`No API data found for channel: ${tvgId} (${channelName})`)
+      logger.debug(`No API data found for channel: ${tvgId || channelName}`)
       skippedCount++
       return
     }
 
     // Get feeds for this channel
-    const feeds = data.feedsGroupedByChannelId.get(tvgId) || []
+    const feeds = data.feedsGroupedByChannelId.get(apiChannel.id) || []
     
     if (feeds.length === 0) {
-      logger.debug(`No EPG feeds found for channel: ${tvgId} (${channelName})`)
+      logger.debug(`No EPG feeds found for channel: ${apiChannel.id} (${channelName})`)
       skippedCount++
       return
     }
@@ -110,13 +122,15 @@ async function main() {
     const siteId = feed.site_id
 
     if (!site || !siteId) {
-      logger.debug(`Invalid feed data for channel: ${tvgId} (${channelName})`)
+      logger.debug(`Invalid feed data for channel: ${apiChannel.id} (${channelName})`)
       skippedCount++
       return
     }
 
+    logger.debug(`Matched channel "${channelName}" by ${matchMethod} -> ${site}/${siteId}`)
+
     const channel = new Channel({
-      xmltv_id: tvgId,
+      xmltv_id: apiChannel.id,
       name: channelName,
       site_id: siteId,
       lang: channelLang.toLowerCase(),
@@ -131,11 +145,11 @@ async function main() {
     matchedCount++
   })
 
-  logger.info(`Matched ${matchedCount} channels with EPG sources`)
-  logger.info(`Skipped ${skippedCount} channels (no tvg-id or no EPG source available)`)
+  logger.info(`Matched ${matchedCount} channels with EPG sources (by tvg-id or name)`)
+  logger.info(`Skipped ${skippedCount} channels (no match found or no EPG source available)`)
 
   if (channels.count() === 0) {
-    logger.warn('No channels were matched! Make sure your M3U file has tvg-id attributes that match the iptv-org database.')
+    logger.warn('No channels were matched! Channels are matched by tvg-id or name against the iptv-org database.')
   }
 
   // Sort channels by site, language and name
