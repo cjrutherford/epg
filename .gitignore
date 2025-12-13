@@ -1,5 +1,6 @@
 /node_modules/
 /temp/
+/public/
 /channels.xml
 /custom.xml
 /guide.xml

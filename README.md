@@ -154,22 +154,45 @@ docker pull ghcr.io/iptv-org/epg:master
 
 ### Create and run container
 
+With a channels.xml file:
+
 ```sh
 docker run -p 3000:3000 -v /path/to/channels.xml:/epg/channels.xml ghcr.io/iptv-org/epg:master
 ```
 
-By default, the guide will be downloaded every day at 00:00 UTC and saved to the `/epg/public/guide.xml` file inside the container.
+With an M3U URL (e.g., US channels from iptv-org):
 
-From the outside, it will be available at this link:
+```sh
+docker run -p 3000:3000 -e M3U_URL=https://iptv-org.github.io/iptv/countries/us.m3u ghcr.io/iptv-org/epg:master
+```
+
+Or use Docker Compose (see `docker-compose.example.yml` for a complete example):
+
+```sh
+docker-compose up -d
+```
+
+By default, the container will:
+1. Load all API data from the [iptv-org/database](https://github.com/iptv-org/database) on startup
+2. If `M3U_URL` is provided:
+   - Parse the M3U file and match channels to EPG sources
+   - Generate an enriched M3U with tvg-id attributes at `/epg/public/playlist.m3u`
+   - Generate channels.xml for EPG grabbing
+3. Download the guide on startup and save it to `/epg/public/guide.xml`
+4. Run scheduled updates every day at 00:00 UTC
+
+The files will be served via HTTP:
 
 ```
-http://localhost:3000/guide.xml
+http://localhost:3000/guide.xml        # EPG guide in XMLTV format
+http://localhost:3000/playlist.m3u     # Enriched M3U playlist (if M3U_URL provided)
 ```
 
 or
 
 ```
 http://<your_local_ip_address>:3000/guide.xml
+http://<your_local_ip_address>:3000/playlist.m3u
 ```
 
 ### Environment Variables
@@ -193,6 +216,8 @@ ghcr.io/iptv-org/epg:master
 
 | Variable        | Description                                                                                                        |
 | --------------- | ------------------------------------------------------------------------------------------------------------------ |
+| M3U_URL         | URL to M3U playlist file (e.g., https://iptv-org.github.io/iptv/countries/us.m3u). Will be parsed into channels.xml |
+| M3U_LANG        | Default language code for M3U channels if not specified in playlist (default: en)                                  |
 | CRON_SCHEDULE   | A [cron expression](https://crontab.guru/) describing the schedule of the guide loadings (default: "0 0 \* \* \*") |
 | MAX_CONNECTIONS | Limit on the number of concurrent requests (default: 1)                                                            |
 | GZIP            | Boolean value indicating whether to create a compressed version of the guide (default: false)                      |
@@ -201,7 +226,7 @@ ghcr.io/iptv-org/epg:master
 | DAYS            | Number of days for which the guide will be loaded (defaults to the value from the site config)                     |
 | TIMEOUT         | Timeout for each request in milliseconds (default: 0)                                                              |
 | DELAY           | Delay between request in milliseconds (default: 0)                                                                 |
-| RUN_AT_STARTUP  | Run grab on container startup (default: true)                                                                      |
+| RUN_AT_STARTUP  | Load API data and run grab on container startup (default: true)                                                    |
 
 ## Database
 

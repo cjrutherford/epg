@@ -1,0 +1,9 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="CNNInternational.us" tvg-logo="https://example.com/cnn.png" tvg-language="en",CNN International
+https://example.com/cnn.m3u8
+#EXTINF:-1 tvg-logo="https://example.com/cnn2.png" tvg-language="en",CNN
+https://example.com/cnn2.m3u8
+#EXTINF:-1 tvg-id="UnknownChannel.us" tvg-logo="https://example.com/unknown.png" tvg-language="en",Unknown Channel
+https://example.com/unknown.m3u8
+#EXTINF:-1 tvg-logo="https://example.com/notvgid.png",Channel Without TVG ID
+https://example.com/notvgid.m3u8
