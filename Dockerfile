@@ -12,13 +12,18 @@ RUN apk update \
     && mkdir $(echo "${WORKDIR}") -p \
     && cd $WORKDIR \
     && git clone --depth 1 -b $(echo "${GIT_BRANCH} ${GIT_REPO}") . \
-    && npm install \
     && mkdir -p public temp/data
+# Copy updated files from fork
+COPY package.json $WORKDIR/package.json
+COPY package-lock.json $WORKDIR/package-lock.json
+COPY pm2.config.js $WORKDIR/pm2.config.js
+COPY scripts/docker-startup.sh $WORKDIR/scripts/docker-startup.sh
+COPY scripts/commands/m3u/ $WORKDIR/scripts/commands/m3u/
+# Install dependencies with updated package files
+RUN cd $WORKDIR && npm install
+RUN chmod +x $WORKDIR/scripts/docker-startup.sh
 RUN apk del git curl \
   && rm -rf /var/cache/apk/*
-COPY pm2.config.js $WORKDIR
-COPY scripts/docker-startup.sh $WORKDIR
-RUN chmod +x $WORKDIR/docker-startup.sh
 WORKDIR $WORKDIR
 EXPOSE 3000
-CMD [ "./docker-startup.sh" ]
+CMD [ "./scripts/docker-startup.sh" ]
