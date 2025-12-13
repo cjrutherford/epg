@@ -1,6 +1,6 @@
 // Build command for M3U parsing if M3U_URL is provided
 const parseM3u = process.env.M3U_URL
-  ? `npm run m3u:parse -- --input="${process.env.M3U_URL}" --output=channels.xml ${process.env.M3U_LANG ? `--lang="${process.env.M3U_LANG}"` : ''} && `
+  ? `npm run m3u:parse -- --input="${process.env.M3U_URL}" --output=channels.xml --enriched-m3u=public/playlist.m3u ${process.env.M3U_LANG ? `--lang="${process.env.M3U_LANG}"` : ''} && `
   : ''
 
 const grab = process.env.SITE

@@ -174,20 +174,25 @@ docker-compose up -d
 
 By default, the container will:
 1. Load all API data from the [iptv-org/database](https://github.com/iptv-org/database) on startup
-2. If `M3U_URL` is provided, parse the M3U file and generate channels.xml
+2. If `M3U_URL` is provided:
+   - Parse the M3U file and match channels to EPG sources
+   - Generate an enriched M3U with tvg-id attributes at `/epg/public/playlist.m3u`
+   - Generate channels.xml for EPG grabbing
 3. Download the guide on startup and save it to `/epg/public/guide.xml`
 4. Run scheduled updates every day at 00:00 UTC
 
-The guide will be served via HTTP and available at:
+The files will be served via HTTP:
 
 ```
-http://localhost:3000/guide.xml
+http://localhost:3000/guide.xml        # EPG guide in XMLTV format
+http://localhost:3000/playlist.m3u     # Enriched M3U playlist (if M3U_URL provided)
 ```
 
 or
 
 ```
 http://<your_local_ip_address>:3000/guide.xml
+http://<your_local_ip_address>:3000/playlist.m3u
 ```
 
 ### Environment Variables

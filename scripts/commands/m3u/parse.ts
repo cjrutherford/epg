@@ -5,18 +5,22 @@ import { generateChannelsXML } from '../../core'
 import { Channel } from '../../models'
 import { Command } from 'commander'
 import { data, loadData, searchChannels } from '../../api'
+import epgGrabber, { EPGGrabber } from 'epg-grabber'
+import { SITES_DIR } from '../../constants'
 import axios from 'axios'
 
 const program = new Command()
 program
   .option('-i, --input <input>', 'Path to M3U file or URL')
   .option('-o, --output <output>', 'Output file path (default: channels.xml)')
+  .option('--enriched-m3u <path>', 'Output path for enriched M3U file (default: enriched.m3u)')
   .option('--lang <lang>', 'Language code (default: en)')
   .parse(process.argv)
 
 interface ParseOptions {
   input?: string
   output?: string
+  enrichedM3u?: string
   lang?: string
 }
 
@@ -27,6 +31,7 @@ async function main() {
   const logger = new Logger()
   const lang = options.lang || 'en'
   const outputFilepath = options.output || 'channels.xml'
+  const enrichedM3uPath = options.enrichedM3u || 'enriched.m3u'
 
   if (!options.input) {
     logger.error('Error: --input parameter is required')
@@ -68,8 +73,42 @@ async function main() {
   logger.info('Loading API data to match channels with EPG sources...')
   await loadData()
 
-  // Convert M3U media items to channels
+  // Load all existing channels from sites to find site/site_id mappings
+  logger.info('Loading existing site configurations...')
+  const sitesStorage = new Storage(SITES_DIR)
+  const siteFiles: string[] = await sitesStorage.list('**/*.channels.xml')
+  
+  // Build a map of xmltv_id -> {site, site_id, name}
+  const xmltvIdToSiteMap = new Map<string, { site: string; site_id: string; site_name: string }>()
+  
+  for (const filepath of siteFiles) {
+    try {
+      const xml = await sitesStorage.load(filepath)
+      const parsedChannels = EPGGrabber.parseChannelsXML(xml)
+      
+      parsedChannels.forEach((ch: epgGrabber.Channel) => {
+        if (ch.xmltv_id && ch.site && ch.site_id) {
+          // Store the first occurrence of each xmltv_id
+          if (!xmltvIdToSiteMap.has(ch.xmltv_id)) {
+            xmltvIdToSiteMap.set(ch.xmltv_id, {
+              site: ch.site,
+              site_id: ch.site_id,
+              site_name: ch.name
+            })
+          }
+        }
+      })
+    } catch (error) {
+      // Skip files that can't be parsed
+      logger.debug(`Could not parse ${filepath}`)
+    }
+  }
+  
+  logger.info(`Loaded ${xmltvIdToSiteMap.size} channel mappings from sites`)
+
+  // Convert M3U media items to channels and build enriched M3U
   const channels = new Collection<Channel>()
+  const enrichedM3uLines: string[] = ['#EXTM3U']
   let matchedCount = 0
   let skippedCount = 0
 
@@ -103,41 +142,59 @@ async function main() {
     
     if (!apiChannel) {
       logger.debug(`No API data found for channel: ${tvgId || channelName}`)
+      
+      // Add to enriched M3U without tvg-id (unmatched)
+      let extinf = '#EXTINF:-1'
+      if (channelLogo) extinf += ` tvg-logo="${channelLogo}"`
+      if (channelLang) extinf += ` tvg-language="${channelLang}"`
+      extinf += `,${channelName}`
+      enrichedM3uLines.push(extinf)
+      enrichedM3uLines.push(media.location)
+      
       skippedCount++
       return
     }
 
-    // Get feeds for this channel
-    const feeds = data.feedsGroupedByChannelId.get(apiChannel.id) || []
+    // Look up site/site_id mapping for this channel
+    const siteMapping = xmltvIdToSiteMap.get(apiChannel.id)
     
-    if (feeds.length === 0) {
-      logger.debug(`No EPG feeds found for channel: ${apiChannel.id} (${channelName})`)
+    if (!siteMapping) {
+      logger.debug(`No site mapping found for channel: ${apiChannel.id} (${channelName})`)
+      
+      // Add to enriched M3U with tvg-id but no EPG source
+      let extinf = '#EXTINF:-1'
+      extinf += ` tvg-id="${apiChannel.id}"`
+      if (channelLogo) extinf += ` tvg-logo="${channelLogo}"`
+      if (channelLang) extinf += ` tvg-language="${channelLang}"`
+      extinf += `,${channelName}`
+      enrichedM3uLines.push(extinf)
+      enrichedM3uLines.push(media.location)
+      
       skippedCount++
       return
     }
 
-    // Use the first feed (or could filter by language/quality)
-    const feed = feeds[0]
-    const site = feed.site
-    const siteId = feed.site_id
+    logger.debug(`Matched channel "${channelName}" by ${matchMethod} -> ${siteMapping.site}/${siteMapping.site_id}`)
 
-    if (!site || !siteId) {
-      logger.debug(`Invalid feed data for channel: ${apiChannel.id} (${channelName})`)
-      skippedCount++
-      return
-    }
+    // Add to enriched M3U with full tvg-id
+    let extinf = '#EXTINF:-1'
+    extinf += ` tvg-id="${apiChannel.id}"`
+    if (channelLogo) extinf += ` tvg-logo="${channelLogo}"`
+    if (channelLang) extinf += ` tvg-language="${channelLang}"`
+    extinf += `,${channelName}`
+    enrichedM3uLines.push(extinf)
+    enrichedM3uLines.push(media.location)
 
-    logger.debug(`Matched channel "${channelName}" by ${matchMethod} -> ${site}/${siteId}`)
-
+    // Add to channels.xml for EPG grab
     const channel = new Channel({
       xmltv_id: apiChannel.id,
       name: channelName,
-      site_id: siteId,
+      site_id: siteMapping.site_id,
       lang: channelLang.toLowerCase(),
       logo: channelLogo,
       url: media.location,
       lcn: null,
-      site: site,
+      site: siteMapping.site,
       index: index
     })
 
@@ -147,6 +204,7 @@ async function main() {
 
   logger.info(`Matched ${matchedCount} channels with EPG sources (by tvg-id or name)`)
   logger.info(`Skipped ${skippedCount} channels (no match found or no EPG source available)`)
+  logger.info(`Total ${playlist.medias.length} channels in enriched M3U`)
 
   if (channels.count() === 0) {
     logger.warn('No channels were matched! Channels are matched by tvg-id or name against the iptv-org database.')
@@ -160,14 +218,15 @@ async function main() {
     (channel: Channel) => channel.site_id
   ])
 
-  // Generate XML
+  // Generate and save enriched M3U
+  const enrichedM3uContent = enrichedM3uLines.join('\n') + '\n'
+  await storage.save(enrichedM3uPath, enrichedM3uContent)
+  logger.info(`Enriched M3U saved to: ${enrichedM3uPath}`)
+
+  // Generate and save channels.xml
   const xml = generateChannelsXML(channels)
-
-  // Save to file
   await storage.save(outputFilepath, xml)
-
-  logger.info(`Successfully created channels.xml with ${channels.count()} channels`)
-  logger.info(`File saved to: ${outputFilepath}`)
+  logger.info(`Channels XML saved to: ${outputFilepath} (${channels.count()} channels with EPG)`)
 }
 
 main()
