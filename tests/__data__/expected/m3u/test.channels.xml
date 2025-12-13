@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<channels>
+  <channel site="m3u" site_id="ABCNews.us" lang="en" xmltv_id="ABCNews.us">ABC News</channel>
+  <channel site="m3u" site_id="CBS.us" lang="en" xmltv_id="CBS.us">CBS</channel>
+</channels>
