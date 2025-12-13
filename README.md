@@ -154,8 +154,16 @@ docker pull ghcr.io/iptv-org/epg:master
 
 ### Create and run container
 
+With a channels.xml file:
+
 ```sh
 docker run -p 3000:3000 -v /path/to/channels.xml:/epg/channels.xml ghcr.io/iptv-org/epg:master
+```
+
+With an M3U URL (e.g., US channels from iptv-org):
+
+```sh
+docker run -p 3000:3000 -e M3U_URL=https://iptv-org.github.io/iptv/countries/us.m3u ghcr.io/iptv-org/epg:master
 ```
 
 Or use Docker Compose (see `docker-compose.example.yml` for a complete example):
@@ -166,8 +174,9 @@ docker-compose up -d
 
 By default, the container will:
 1. Load all API data from the [iptv-org/database](https://github.com/iptv-org/database) on startup
-2. Download the guide on startup and save it to `/epg/public/guide.xml`
-3. Run scheduled updates every day at 00:00 UTC
+2. If `M3U_URL` is provided, parse the M3U file and generate channels.xml
+3. Download the guide on startup and save it to `/epg/public/guide.xml`
+4. Run scheduled updates every day at 00:00 UTC
 
 The guide will be served via HTTP and available at:
 
@@ -202,6 +211,8 @@ ghcr.io/iptv-org/epg:master
 
 | Variable        | Description                                                                                                        |
 | --------------- | ------------------------------------------------------------------------------------------------------------------ |
+| M3U_URL         | URL to M3U playlist file (e.g., https://iptv-org.github.io/iptv/countries/us.m3u). Will be parsed into channels.xml |
+| M3U_LANG        | Default language code for M3U channels if not specified in playlist (default: en)                                  |
 | CRON_SCHEDULE   | A [cron expression](https://crontab.guru/) describing the schedule of the guide loadings (default: "0 0 \* \* \*") |
 | MAX_CONNECTIONS | Limit on the number of concurrent requests (default: 1)                                                            |
 | GZIP            | Boolean value indicating whether to create a compressed version of the guide (default: false)                      |

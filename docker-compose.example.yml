@@ -18,7 +18,10 @@ services:
       - RUN_AT_STARTUP=true
       # Schedule for automatic updates (default: daily at midnight UTC)
       - CRON_SCHEDULE=0 0 * * *
-      # Optional: Specify a specific site instead of using channels.xml
+      # Optional: Parse M3U from URL (example: US channels from iptv-org)
+      # - M3U_URL=https://iptv-org.github.io/iptv/countries/us.m3u
+      # - M3U_LANG=en
+      # Optional: Specify a specific site instead of using channels.xml or M3U
       # - SITE=example.com
       # - CLANG=en
       # Optional: Performance tuning
