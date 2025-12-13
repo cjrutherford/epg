@@ -2,14 +2,16 @@ import { execSync } from 'child_process'
 import fs from 'fs-extra'
 import { pathToFileURL } from 'node:url'
 
+const ENV_VAR = 'cross-env DATA_DIR=tests/__data__/input/data'
+
 beforeEach(() => {
   fs.emptyDirSync('tests/__data__/output')
 })
 
 describe('m3u:parse', () => {
-  it('can parse m3u file', () => {
+  it('can parse m3u file and match channels with EPG sources', () => {
     const cmd =
-      'npm run m3u:parse --- --input=tests/__data__/input/m3u/test.m3u --output=tests/__data__/output/test.channels.xml'
+      `${ENV_VAR} npm run m3u:parse --- --input=tests/__data__/input/m3u/test.m3u --output=tests/__data__/output/test.channels.xml`
     const stdout = execSync(cmd, { encoding: 'utf8' })
     if (process.env.DEBUG === 'true') console.log(cmd, stdout)
 

@@ -1,5 +1,7 @@
 #EXTM3U
-#EXTINF:-1 tvg-id="ABCNews.us" tvg-logo="https://example.com/abc.png" tvg-language="en",ABC News
-https://example.com/abc.m3u8
-#EXTINF:-1 tvg-id="CBS.us" tvg-logo="https://example.com/cbs.png" tvg-language="en",CBS
-https://example.com/cbs.m3u8
+#EXTINF:-1 tvg-id="CNNInternational.us" tvg-logo="https://example.com/cnn.png" tvg-language="en",CNN International
+https://example.com/cnn.m3u8
+#EXTINF:-1 tvg-id="UnknownChannel.us" tvg-logo="https://example.com/unknown.png" tvg-language="en",Unknown Channel
+https://example.com/unknown.m3u8
+#EXTINF:-1 tvg-logo="https://example.com/notvgid.png",Channel Without TVG ID
+https://example.com/notvgid.m3u8

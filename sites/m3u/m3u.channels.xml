@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<channels>
-  <!-- Channels from M3U playlists will be generated dynamically -->
-  <!-- Use M3U_URL environment variable to provide your M3U playlist -->
-</channels>
